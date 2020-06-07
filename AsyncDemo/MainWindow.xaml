@@ -1,0 +1,22 @@
+﻿<Window x:Class="AsyncDemo.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AsyncDemo"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="300" Width="300">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Height" Value="30"></Setter>
+            <Setter Property="Margin" Value="2"></Setter>
+        </Style>
+    </Window.Resources>
+    <StackPanel>
+        <Button Name="SyncMethod" Click="SyncMethod_OnClick">同步呼叫</Button>
+        <Button Name="AsyncMethod" Click="AsyncMethod_OnClick">非同步呼叫 (Action)</Button>
+        <Button Name="AsyncCallback" Click="AsyncCallback_OnClick">非同步呼叫完成再執行 (Action)</Button>
+        <Button Name="AsyncReturnValue" Click="AsyncReturnValue_OnClick">非同步呼叫返回值 (Func)</Button>
+        <Button Name="ThreadMethod" Click="Thread_OnClick">Thread</Button>
+    </StackPanel>
+</Window>
