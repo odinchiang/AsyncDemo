@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Windows;
+using ThreadState = System.Threading.ThreadState;
 
 namespace AsyncDemo
 {
@@ -149,14 +150,14 @@ namespace AsyncDemo
 
             {
                 // ParameterizedThreadStart：有參數無回傳值的委派
-                ParameterizedThreadStart threadStart = ar =>
-                {
-                    DoSomethingLong("Thread_OnClick1");
-                    Console.WriteLine($@"threadStart1 [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
-                };
+                //ParameterizedThreadStart threadStart = ar =>
+                //{
+                //    DoSomethingLong("Thread_OnClick1");
+                //    Console.WriteLine($@"threadStart1 [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+                //};
 
-                Thread thread = new Thread(threadStart);
-                thread.Start(); // 開啟一個新執行緒
+                //Thread thread = new Thread(threadStart);
+                //thread.Start(); // 開啟一個新執行緒
             }
 
             {
@@ -175,6 +176,27 @@ namespace AsyncDemo
                 
                 //thread.Abort(); // 終結執行緒
                 //Thread.ResetAbort(); // 取消 Abort
+
+                // 等待執行緒 方法 1 (會鎖 UI)
+                //while (thread.ThreadState != ThreadState.Stopped)
+                //{
+                //    Thread.Sleep(200);
+                //}
+
+                // 等待執行緒 方法 2 (會鎖 UI)
+                //thread.Join();
+                //thread.Join(2000); // 可以限定等待時間
+
+                // 設定優先級
+                // 即使設定最高優先級，仍無法保證真的優先執行，只是增加優先的概率。
+                thread.Priority = ThreadPriority.Highest;
+
+                // 是否為後台執行緒 (預設為 false)
+                // true：背景執行緒 => Process 結束，執行緒也跟著結束
+                // false：前景執行緒 => Process 結束後，執行緒會繼續未完的工作直到結束
+                thread.IsBackground = true;
+
+
             }
 
             Console.WriteLine($@"AsyncReturnValue_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
