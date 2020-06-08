@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AsyncDemo"
         mc:Ignorable="d"
-        Title="MainWindow" Height="300" Width="300">
+        Title="MainWindow" Height="400" Width="300">
     <Window.Resources>
         <Style TargetType="Button">
             <Setter Property="Height" Value="30"></Setter>
@@ -20,5 +20,6 @@
         <Button Name="ThreadMethod" Click="Thread_OnClick">Thread</Button>
         <Button Name="ThreadCallback" Click="ThreadCallback_OnClick">Thread 回調函數</Button>
         <Button Name="ThreadReturnValue" Click="ThreadReturnValue_OnClick">Thread 獲取執行緒返回結果</Button>
+        <Button Name="ThreadPoolMethod" Click="ThreadPool_OnClick">Thread Pool</Button>
     </StackPanel>
 </Window>

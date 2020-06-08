@@ -292,6 +292,43 @@ namespace AsyncDemo
             });
         }
 
+        /// <summary>
+        /// 在 Thread 中對執行緒的管理需要自己去做操作，在不斷的開啟及銷毀執行緒中，
+        /// 存在很大的開銷，為了讓執行緒可以反覆使用，所以有 Thread Pool 的概念。
+        /// Thread Pool 可以控制執行緒數量，防止濫用，節省資源。
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ThreadPool_OnClick(object sender, RoutedEventArgs e)
+        {
+            Console.WriteLine(@"---------------------------------------------------------");
+            Console.WriteLine($@"ThreadPool_OnClick Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+
+            {
+                //ThreadPool.QueueUserWorkItem(x =>
+                //{
+                //    // 開啟一個執行緒
+                //    DoSomethingLong("ThreadPool_OnClick");
+                //});
+            }
+
+            {
+                ThreadPool.QueueUserWorkItem(x =>
+                {
+                    Console.WriteLine($@"第二個參數：{x}");
+                    DoSomethingLong("ThreadPool_OnClick");
+                }, "state");
+            }
+
+            Console.WriteLine($@"ThreadPool_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+        }
+
+
+
+
+
+
+
         private void DoSomethingLong(string text)
         {
             Console.WriteLine($@"==== [{text}] Do Something Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff} ====");
@@ -312,5 +349,6 @@ namespace AsyncDemo
             return DateTime.Now.Year;
         }
 
+        
     }
 }
