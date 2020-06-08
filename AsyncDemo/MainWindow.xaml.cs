@@ -195,11 +195,101 @@ namespace AsyncDemo
                 // true：背景執行緒 => Process 結束，執行緒也跟著結束
                 // false：前景執行緒 => Process 結束後，執行緒會繼續未完的工作直到結束
                 thread.IsBackground = true;
-
-
             }
 
             Console.WriteLine($@"AsyncReturnValue_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+        }
+
+        /// <summary>
+        /// Thread 回調函數
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ThreadCallback_OnClick(object sender, RoutedEventArgs e)
+        {
+            Console.WriteLine(@"---------------------------------------------------------");
+            Console.WriteLine($@"ThreadCallback_OnClick Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+
+            ThreadStart threadStart = () =>
+            {
+                DoSomethingLong("threadStart");
+            };
+
+            Action action = () =>
+            {
+                DoSomethingLong("callback function");
+            };
+
+            ThreadWithCallBack(threadStart, action);
+
+            Console.WriteLine($@"ThreadCallback_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+        }
+
+        /// <summary>
+        /// 執行完 Thread 執行緒後，才執行特定方法
+        /// </summary>
+        /// <param name="threadStart"></param>
+        /// <param name="actionCallback"></param>
+        private void ThreadWithCallBack(ThreadStart threadStart, Action actionCallback)
+        {
+            // 方法 1：等待執行緒結束在執行特定方法，會鎖 UI
+            //Thread thread = new Thread(threadStart);
+            //thread.Start();
+            //thread.Join(); // 等待執行緒完成，會鎖 UI
+            //actionCallback.Invoke(); // 執行 callback 函數
+
+            // 方法 2：將要執行的 ThreadStart 跟回調函數包在同一個 ThreadStart 裡，按順序排放，再開執行緒執行
+            ThreadStart threadStartOuter = new ThreadStart(() =>
+            {
+                threadStart.Invoke();
+                actionCallback.Invoke();
+            });
+
+            Thread thread = new Thread(threadStartOuter);
+            thread.Start();
+        }
+
+        /// <summary>
+        /// Thread 獲取執行緒返回結果
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ThreadReturnValue_OnClick(object sender, RoutedEventArgs e)
+        {
+            Func<int> func = () =>
+            {
+                Thread.Sleep(5000);
+                return DateTime.Now.Year;
+            };
+
+            // 返回一個委派，在需要執行結果的時候，在執行這個委派
+            Func<int> funcResult = ThreadWithReturn(func);
+
+            Console.WriteLine(@"中間過程");
+            Console.WriteLine(@"中間過程");
+            Console.WriteLine(@"中間過程");
+
+            int iResult = funcResult.Invoke(); // 會鎖住 UI
+            Console.WriteLine(iResult.ToString());
+        }
+
+        private Func<T> ThreadWithReturn<T>(Func<T> func)
+        {
+            T t = default(T);
+
+            ThreadStart threadStart = new ThreadStart(() =>
+            {
+                t = func.Invoke();
+            });
+
+            Thread thread = new Thread(threadStart);
+            thread.Start();
+
+            return new Func<T>(() =>
+            {
+                thread.Join();
+                return t;
+            });
         }
 
         private void DoSomethingLong(string text)
@@ -221,5 +311,6 @@ namespace AsyncDemo
 
             return DateTime.Now.Year;
         }
+
     }
 }

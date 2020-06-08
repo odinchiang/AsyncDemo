@@ -18,5 +18,7 @@
         <Button Name="AsyncCallback" Click="AsyncCallback_OnClick">非同步呼叫完成再執行 (Action)</Button>
         <Button Name="AsyncReturnValue" Click="AsyncReturnValue_OnClick">非同步呼叫返回值 (Func)</Button>
         <Button Name="ThreadMethod" Click="Thread_OnClick">Thread</Button>
+        <Button Name="ThreadCallback" Click="ThreadCallback_OnClick">Thread 回調函數</Button>
+        <Button Name="ThreadReturnValue" Click="ThreadReturnValue_OnClick">Thread 獲取執行緒返回結果</Button>
     </StackPanel>
 </Window>
