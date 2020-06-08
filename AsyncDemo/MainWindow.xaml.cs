@@ -313,17 +313,57 @@ namespace AsyncDemo
             }
 
             {
-                ThreadPool.QueueUserWorkItem(x =>
-                {
-                    Console.WriteLine($@"第二個參數：{x}");
-                    DoSomethingLong("ThreadPool_OnClick");
-                }, "state");
+                //ThreadPool.QueueUserWorkItem(x =>
+                //{
+                //    Console.WriteLine($@"第二個參數：{x}");
+                //    DoSomethingLong("ThreadPool_OnClick");
+                //}, "state");
+            }
+
+            {
+                ThreadPool.GetMaxThreads(out int maxWorkerThreads, out int maxCompletionPortThreads);
+                ThreadPool.GetMinThreads(out int minWorkerThreads, out int minCompletionPortThreads);
+                Console.WriteLine($@"Max WorkerThreads: {maxWorkerThreads}，Max CompletionPortThreads: {maxCompletionPortThreads}");
+                Console.WriteLine($@"Min WorkerThreads: {minWorkerThreads}，Min CompletionPortThreads: {minCompletionPortThreads}");
+
+                // 設置執行緒數量是全域的，Thread Pool 是全域，Task、async/await 都是來自於 Thread Pool
+                // 不建議隨便設置
+                Console.WriteLine(@"設置執行緒數量後");
+                ThreadPool.SetMaxThreads(100, 200); // 最大數量不能低於當前電腦的 CPU 核數
+                ThreadPool.SetMinThreads(20, 40);
+
+                ThreadPool.GetMaxThreads(out int maxWorkerThreads1, out int maxCompletionPortThreads1);
+                ThreadPool.GetMinThreads(out int minWorkerThreads1, out int minCompletionPortThreads1);
+                Console.WriteLine($@"Max WorkerThreads: {maxWorkerThreads1}，Max CompletionPortThreads: {maxCompletionPortThreads1}");
+                Console.WriteLine($@"Min WorkerThreads: {minWorkerThreads1}，Min CompletionPortThreads: {minCompletionPortThreads1}");
             }
 
             Console.WriteLine($@"ThreadPool_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
         }
 
+        /// <summary>
+        /// 執行緒等待
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ThreadPoolWait_OnClick(object sender, RoutedEventArgs e)
+        {
+            Console.WriteLine(@"---------------------------------------------------------");
+            Console.WriteLine($@"ThreadPoolWait_OnClick Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
 
+            //  Thread Pool 中的開關式
+            ManualResetEvent manualResetEvent = new ManualResetEvent(false); // 開關關閉
+
+            ThreadPool.QueueUserWorkItem(x =>
+            {
+                DoSomethingLong("ThreadPoolWait_OnClick");
+                manualResetEvent.Set(); // 發出訊號讓後面的 WaitOne 知道執行緒已經執行完畢，讓主執行緒繼續下去
+            });
+
+            manualResetEvent.WaitOne(); // 會等待執行緒，直到 Set 發出訊號，會鎖 UI
+
+            Console.WriteLine($@"ThreadPoolWait_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+        }
 
 
 
@@ -348,6 +388,7 @@ namespace AsyncDemo
 
             return DateTime.Now.Year;
         }
+
 
         
     }

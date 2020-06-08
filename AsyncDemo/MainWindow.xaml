@@ -21,5 +21,6 @@
         <Button Name="ThreadCallback" Click="ThreadCallback_OnClick">Thread 回調函數</Button>
         <Button Name="ThreadReturnValue" Click="ThreadReturnValue_OnClick">Thread 獲取執行緒返回結果</Button>
         <Button Name="ThreadPoolMethod" Click="ThreadPool_OnClick">Thread Pool</Button>
+        <Button Name="ThreadPoolWait" Click="ThreadPoolWait_OnClick">Thread Pool Wait</Button>
     </StackPanel>
 </Window>
