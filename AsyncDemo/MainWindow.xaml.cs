@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Documents;
 using ThreadState = System.Threading.ThreadState;
 
 namespace AsyncDemo
@@ -365,6 +368,133 @@ namespace AsyncDemo
             Console.WriteLine($@"ThreadPoolWait_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
         }
 
+        /// <summary>
+        /// Thread Pool 勿隨意設置執行緒數量，容易發生無法預期的錯誤
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ThreadPoolSetWrong_OnClick(object sender, RoutedEventArgs e)
+        {
+            Console.WriteLine(@"---------------------------------------------------------");
+            Console.WriteLine($@"ThreadPoolSetWrong_OnClick Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+
+            ThreadPool.SetMaxThreads(8, 8);
+            ManualResetEvent manualResetEvent = new ManualResetEvent(false); // 開關關閉
+            for (int i = 0; i < 10; i++)
+            {
+                int k = i;
+                ThreadPool.QueueUserWorkItem(x =>
+                {
+                    Console.WriteLine($@"QueueUserWorkItem [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+
+                    if (k == 9) // 執行緒最大數量被設定為 8 個，所以一直無法進去進行 Set，導致死鎖
+                        manualResetEvent.Set();
+                    else
+                        manualResetEvent.WaitOne();
+                });
+            }
+
+            if (manualResetEvent.WaitOne())
+                Console.WriteLine(@"執行成功！");
+
+            Console.WriteLine($@"ThreadPool_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+        }
+
+        /// <summary>
+        /// Task 裡的執行緒是來自於 Thread Pool
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void TaskMethod_OnClick(object sender, RoutedEventArgs e)
+        {
+            Console.WriteLine(@"---------------------------------------------------------");
+            Console.WriteLine($@"TaskMethod_OnClick Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+
+            {
+                Task task = new Task(() =>
+                {
+                    DoSomethingLong("TaskMethod_OnClick1");
+                });
+
+                task.Start(); // 開啟一個新的執行緒
+            }
+
+            {
+                Task.Run(() =>
+                {
+                    DoSomethingLong("TaskMethod_OnClick2");
+                });
+            }
+
+            {
+                //TaskFactory taskFactory = new TaskFactory();
+                TaskFactory taskFactory = Task.Factory;
+                taskFactory.StartNew(() =>
+                {
+                    DoSomethingLong("TaskMethod_OnClick3");
+                });
+            }
+
+            {
+                // 延遲 2 秒後執行後續的動作
+                Task task = Task.Delay(2000).ContinueWith(x =>
+                {
+                    DoSomethingLong("TaskMethod_OnClick4");
+                    Thread.Sleep(2000);
+                    Console.WriteLine(@"回調已完成");
+                });
+            }
+
+            Console.WriteLine($@"TaskMethod_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+        }
+
+        private void TaskWait_OnClick(object sender, RoutedEventArgs e)
+        {
+            Console.WriteLine(@"---------------------------------------------------------");
+            Console.WriteLine($@"TaskWait_OnClick Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+
+            // 多執行緒使用的前提：可以並發執行的時候就可以使用多執行緒
+            Console.WriteLine(@"老師開始講課！");
+            Teach("Lesson 1");
+            Teach("Lesson 2");
+            Teach("Lesson 3");
+            Teach("Lesson 4");
+            Teach("Lesson 5");
+            Console.WriteLine(@"課程結束，開始實戰專案練習！實戰專案內容較複雜，需要同學合作完成！");
+
+            List<Task> tasks = new List<Task>();
+
+            TaskFactory taskFactory = new TaskFactory();
+            tasks.Add(taskFactory.StartNew(() => Code("Mark", "系統管理")));
+            tasks.Add(taskFactory.StartNew(() => Code("John", "部門管理")));
+            tasks.Add(taskFactory.StartNew(() => Code("Mary", "客戶管理")));
+            tasks.Add(taskFactory.StartNew(() => Code("Jason", "介面管理")));
+            tasks.Add(taskFactory.StartNew(() => Code("Andy", "API")));
+
+            // WaitAny 及 WaitAll 會 block 主執行緒
+
+            //Task.WaitAny(tasks.ToArray()); // 有任一個執行緒完成即繼續往下執行
+            //Console.WriteLine(@"老師開始準備部署環境！");
+
+            //Task.WaitAll(tasks.ToArray()); // 需等待所有執行緒完成才會往下執行，會 block 主執行緒
+            //Console.WriteLine(@"專案作業已完成，老師評論！");
+
+            // 若不 block 主執行緒，可改用 ContinueWhenAny 及 ContinueWhenAll 進行回調
+
+            taskFactory.ContinueWhenAny(tasks.ToArray(), x =>
+            {
+                Console.WriteLine(@"老師開始準備部署環境！");
+            });
+
+            taskFactory.ContinueWhenAll(tasks.ToArray(), t =>
+            {
+                Console.WriteLine(@"專案作業已完成，老師評論！");
+            });
+
+            Console.WriteLine($@"TaskWait_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+        }
+
+
 
 
 
@@ -389,6 +519,23 @@ namespace AsyncDemo
             return DateTime.Now.Year;
         }
 
+        private void Teach(string lesson)
+        {
+            Console.WriteLine($@"==== 課程：{lesson} Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff} ====");
+
+            Thread.Sleep(2000);
+
+            Console.WriteLine($@"==== 課程：{lesson} End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff} ====");
+        }
+
+        private void Code(string name, string projectName)
+        {
+            Console.WriteLine($@"==== [{name}] Coding [{projectName}] Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff} ====");
+
+            Thread.Sleep(5000);
+
+            Console.WriteLine($@"==== [{name}] Coding [{projectName}] End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff} ====");
+        }
 
         
     }
