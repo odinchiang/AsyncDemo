@@ -465,35 +465,132 @@ namespace AsyncDemo
             List<Task> tasks = new List<Task>();
 
             TaskFactory taskFactory = new TaskFactory();
-            tasks.Add(taskFactory.StartNew(() => Code("Mark", "系統管理")));
-            tasks.Add(taskFactory.StartNew(() => Code("John", "部門管理")));
-            tasks.Add(taskFactory.StartNew(() => Code("Mary", "客戶管理")));
-            tasks.Add(taskFactory.StartNew(() => Code("Jason", "介面管理")));
-            tasks.Add(taskFactory.StartNew(() => Code("Andy", "API")));
+            //tasks.Add(taskFactory.StartNew(() => Code("Mark", "系統管理")));
+            //tasks.Add(taskFactory.StartNew(() => Code("John", "部門管理")));
+            //tasks.Add(taskFactory.StartNew(() => Code("Mary", "客戶管理")));
+            //tasks.Add(taskFactory.StartNew(() => Code("Jason", "介面管理")));
+            //tasks.Add(taskFactory.StartNew(() => Code("Andy", "API")));
+
+            // StartNew 的第二個參數提供回傳值
+            tasks.Add(taskFactory.StartNew(o => Code("Mark", "系統管理"), "Mark"));
+            tasks.Add(taskFactory.StartNew(o => Code("John", "部門管理"), "John"));
+            tasks.Add(taskFactory.StartNew(o => Code("Mary", "客戶管理"), "Mary"));
+            tasks.Add(taskFactory.StartNew(o => Code("Jason", "介面管理"), "Jason"));
+            tasks.Add(taskFactory.StartNew(o => Code("Andy", "API"), "Andy"));
 
             // WaitAny 及 WaitAll 會 block 主執行緒
-
-            //Task.WaitAny(tasks.ToArray()); // 有任一個執行緒完成即繼續往下執行
-            //Console.WriteLine(@"老師開始準備部署環境！");
-
-            //Task.WaitAll(tasks.ToArray()); // 需等待所有執行緒完成才會往下執行，會 block 主執行緒
-            //Console.WriteLine(@"專案作業已完成，老師評論！");
-
             // 若不 block 主執行緒，可改用 ContinueWhenAny 及 ContinueWhenAll 進行回調
 
             taskFactory.ContinueWhenAny(tasks.ToArray(), x =>
             {
-                Console.WriteLine(@"老師開始準備部署環境！");
+                // 只要有一個執行緒完成即進入此回掉函數，不會 block 主執行緒，使用的可能是新執行緒，也有可能
+                // 是剛完成任務的執行緒。
+                // 利用 AsyncState 取得傳入的值
+                Console.WriteLine($@"ContinueWhenAny {x.AsyncState} 獲取一個獎勵！ [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
             });
 
-            taskFactory.ContinueWhenAll(tasks.ToArray(), t =>
+            // 要限制這個在"模組均已完成"訊息之前出現，則須將此也放入 task list 中
+            //taskFactory.ContinueWhenAll(tasks.ToArray(), t =>
+            //{
+            //    Console.WriteLine($@"ContinueWhenAll 所有人任務開發完畢，慶祝一下！ [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+            //});
+            tasks.Add(taskFactory.ContinueWhenAll(tasks.ToArray(), t =>
             {
-                Console.WriteLine(@"專案作業已完成，老師評論！");
-            });
+                Console.WriteLine($@"ContinueWhenAll 所有人任務開發完畢，慶祝一下！ [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+            }));
+
+            Task.WaitAny(tasks.ToArray()); // 有任一個執行緒完成即繼續往下執行
+            Console.WriteLine($@"老師開始準備部署環境！ [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+
+            Task.WaitAll(tasks.ToArray()); // 需等待所有執行緒完成才會往下執行，會 block 主執行緒
+            Console.WriteLine($@"模組均已完成，老師評論！ [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
 
             Console.WriteLine($@"TaskWait_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
         }
 
+        /// <summary>
+        /// Task 返回值
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void TaskReturnValue_OnClick(object sender, RoutedEventArgs e)
+        {
+            {
+                // 會鎖住 UI
+                Task<int> result = Task.Run<int>(() =>
+                {
+                    Thread.Sleep(5000);
+                    return DateTime.Now.Year;
+                });
+                int iResult = result.Result;
+                Console.WriteLine(iResult);
+            }
+
+            {
+                // 不會鎖住 UI
+                Task.Run<int>(() =>
+                {
+                    Thread.Sleep(5000);
+                    return DateTime.Now.Year;
+                }).ContinueWith(intT =>
+                {
+                    int i = intT.Result;
+                    Console.WriteLine(i);
+                });
+            }
+        }
+
+        /// <summary>
+        /// Parallel 對 Task 進行進一步的封裝
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ParallelMethod_OnClick(object sender, RoutedEventArgs e)
+        {
+            Console.WriteLine(@"---------------------------------------------------------");
+            Console.WriteLine($@"ParallelMethod_OnClick Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+
+            {
+                // 多執行緒中控制執行順序並不容易，使用 Parallel 可以控制執行緒的執行順序
+                // Parallel 並發執行委派，開啟新執行緒，主執行緒也參與計算，UI 會鎖住
+                // Task WaitAll + 主執行緒
+                //Parallel.Invoke(() => DoSomethingLong("Parallel.Invoke_1"),
+                //    () => DoSomethingLong("Parallel.Invoke_2"),
+                //    () => DoSomethingLong("Parallel.Invoke_3"));
+            }
+
+            {
+                // 按順序執行，鎖 UI
+                // 會同時開啟 10 個執行緒
+                Parallel.For(0, 10, t => DoSomethingLong($"Parallel.For ({t})"));
+
+                //設定 ParallelOptions 的 MaxDegreeOfParallelism，會限制執行緒的數量
+                //ParallelOptions parallelOptions = new ParallelOptions()
+                //{
+                //    MaxDegreeOfParallelism = 3 // 控制執行緒的最大數量
+                //};
+                //Parallel.For(0, 10, parallelOptions, t => DoSomethingLong($"Parallel.For ({t})"));
+            }
+
+            {
+                // 按順序執行，鎖 UI
+                //Parallel.ForEach(new int[] {12, 13, 14, 15},
+                //    t => DoSomethingLong($"Parallel.ForEach ({t})"));
+            }
+
+            {
+                // 控制執行緒數量
+                //ParallelOptions parallelOptions = new ParallelOptions()
+                //{
+                //    MaxDegreeOfParallelism = 3 // 控制執行緒的最大數量
+                //};
+                //Parallel.ForEach(new int[] { 12, 13, 14, 15, 16, 17 }, parallelOptions,
+                //    t => DoSomethingLong($"Parallel.ForEach ({t})"));
+            }
+
+
+            Console.WriteLine($@"ParallelMethod_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+        }
 
 
 
@@ -523,7 +620,7 @@ namespace AsyncDemo
         {
             Console.WriteLine($@"==== 課程：{lesson} Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff} ====");
 
-            Thread.Sleep(2000);
+            Thread.Sleep(200);
 
             Console.WriteLine($@"==== 課程：{lesson} End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff} ====");
         }
@@ -532,10 +629,11 @@ namespace AsyncDemo
         {
             Console.WriteLine($@"==== [{name}] Coding [{projectName}] Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff} ====");
 
-            Thread.Sleep(5000);
+            Thread.Sleep(2000);
 
             Console.WriteLine($@"==== [{name}] Coding [{projectName}] End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff} ====");
         }
+
 
         
     }

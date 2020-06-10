@@ -12,18 +12,22 @@
             <Setter Property="Margin" Value="2"></Setter>
         </Style>
     </Window.Resources>
-    <StackPanel>
-        <Button Name="SyncMethod" Click="SyncMethod_OnClick">同步呼叫</Button>
-        <Button Name="AsyncMethod" Click="AsyncMethod_OnClick">非同步呼叫 (Action)</Button>
-        <Button Name="AsyncCallback" Click="AsyncCallback_OnClick">非同步呼叫完成再執行 (Action)</Button>
-        <Button Name="AsyncReturnValue" Click="AsyncReturnValue_OnClick">非同步呼叫返回值 (Func)</Button>
-        <Button Name="ThreadMethod" Click="Thread_OnClick">Thread</Button>
-        <Button Name="ThreadCallback" Click="ThreadCallback_OnClick">Thread 回調函數</Button>
-        <Button Name="ThreadReturnValue" Click="ThreadReturnValue_OnClick">Thread 獲取執行緒返回結果</Button>
-        <Button Name="ThreadPoolMethod" Click="ThreadPool_OnClick">Thread Pool</Button>
-        <Button Name="ThreadPoolWait" Click="ThreadPoolWait_OnClick">Thread Pool Wait</Button>
-        <Button Name="ThreadPoolSetWrong" Click="ThreadPoolSetWrong_OnClick">Thread Pool 設置問題</Button>
-        <Button Name="TaskMethod" Click="TaskMethod_OnClick">Task</Button>
-        <Button Name="TaskWait" Click="TaskWait_OnClick">Task 等待</Button>
-    </StackPanel>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <Button Name="SyncMethod" Click="SyncMethod_OnClick">同步呼叫</Button>
+            <Button Name="AsyncMethod" Click="AsyncMethod_OnClick">非同步呼叫 (Action)</Button>
+            <Button Name="AsyncCallback" Click="AsyncCallback_OnClick">非同步呼叫完成再執行 (Action)</Button>
+            <Button Name="AsyncReturnValue" Click="AsyncReturnValue_OnClick">非同步呼叫返回值 (Func)</Button>
+            <Button Name="ThreadMethod" Click="Thread_OnClick">Thread</Button>
+            <Button Name="ThreadCallback" Click="ThreadCallback_OnClick">Thread 回調函數</Button>
+            <Button Name="ThreadReturnValue" Click="ThreadReturnValue_OnClick">Thread 獲取執行緒返回結果</Button>
+            <Button Name="ThreadPoolMethod" Click="ThreadPool_OnClick">Thread Pool</Button>
+            <Button Name="ThreadPoolWait" Click="ThreadPoolWait_OnClick">Thread Pool Wait</Button>
+            <Button Name="ThreadPoolSetWrong" Click="ThreadPoolSetWrong_OnClick">Thread Pool 設置問題</Button>
+            <Button Name="TaskMethod" Click="TaskMethod_OnClick">Task</Button>
+            <Button Name="TaskWait" Click="TaskWait_OnClick">Task 等待</Button>
+            <Button Name="TaskReturnValue" Click="TaskReturnValue_OnClick">Task 返回值</Button>
+            <Button Name="ParallelMethod" Click="ParallelMethod_OnClick">Parallel</Button>
+        </StackPanel>
+    </ScrollViewer>
 </Window>
