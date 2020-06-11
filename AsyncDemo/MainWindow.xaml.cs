@@ -176,7 +176,7 @@ namespace AsyncDemo
 
                 //thread.Suspend(); // 暫停執行緒，已被棄用
                 //thread.Resume(); // 恢復繼續執行緒，已被棄用，無法實時的暫停或恢復執行緒
-                
+
                 //thread.Abort(); // 終結執行緒
                 //Thread.ResetAbort(); // 取消 Abort
 
@@ -551,7 +551,7 @@ namespace AsyncDemo
             Console.WriteLine($@"ParallelMethod_OnClick Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
 
             {
-                // 多執行緒中控制執行順序並不容易，使用 Parallel 可以控制執行緒的執行順序
+                // Parallel 主要可以控制執行緒數量
                 // Parallel 並發執行委派，開啟新執行緒，主執行緒也參與計算，UI 會鎖住
                 // Task WaitAll + 主執行緒
                 //Parallel.Invoke(() => DoSomethingLong("Parallel.Invoke_1"),
@@ -588,10 +588,162 @@ namespace AsyncDemo
                 //    t => DoSomethingLong($"Parallel.ForEach ({t})"));
             }
 
+            {
+                // 若不希望主執行緒也參與計算，則另外開一個執行緒將目前的任務包進去
+                //Task.Run(() =>
+                //{
+                //    Parallel.For(0, 10, t => DoSomethingLong($"Parallel.For ({t})"));
+                //});
+            }
+
 
             Console.WriteLine($@"ParallelMethod_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
         }
 
+        /// <summary>
+        /// 多執行緒的異常處理
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ThreadException_OnClick(object sender, RoutedEventArgs e)
+        {
+            // 多執行緒中如果某一個執行緒異常，就會終止當前的執行緒；對其他的執行緒沒有影響。
+            {
+                //Thread thread = new Thread();
+                //thread.Abort(); // Abort 會拋出一個異常，讓執行緒中止
+            }
+
+            {
+                try
+                {
+                    List<Task> taskList = new List<Task>();
+                    for (int i = 0; i < 20; i++)
+                    {
+                        string name = $"ThreadException_OnClick_{i}";
+                        int k = i;
+                        taskList.Add(Task.Run(() =>
+                        {
+                            if (k == 5)
+                            {
+                                throw new Exception($"{name} Exception!");
+                            }
+                            else if (k == 6)
+                            {
+                                throw new Exception($"{name} Exception!");
+                            }
+                            else if (k == 10)
+                            {
+                                throw new Exception($"{name} Exception!");
+                            }
+
+                            Console.WriteLine($@"{name} ok!");
+                        }));
+                    }
+
+                    // 只有 WaitAll 之後才能捕捉到所有的異常信息
+                    // 實際開發中是不允許在子執行緒中出現異常的
+                    Task.WaitAll(taskList.ToArray());
+                }
+                catch (AggregateException aex)
+                {
+                    foreach (var ex in aex.InnerExceptions)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 取消執行緒
+        /// 若有一個執行緒出現異常，需要停止其他的執行緒
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void CancelThread_OnClick(object sender, RoutedEventArgs e)
+        {
+            // 在 Task 中開啟的執行緒無法從外部取消，只能自己停止自己
+
+            // 執行緒安全
+            CancellationTokenSource cts = new CancellationTokenSource();
+
+            // CancellationTokenSource 有一個狀態值 IsCancellationRequested，預設值為 false
+            // 提供一個 Cancel 方法改變 IsCancellationRequested 狀態，false 改為 true
+            // 且只能改變一次，改為 true 之後就不能再被修改，避免其他的操作去改變它
+
+            // 1. 創建 CancellationTokenSource 變數
+            // 2. try-catch 捕捉異常
+            // 3. 在開啟的執行緒中判斷業務邏輯
+            // 4. 若子執行緒有異常發生時，就要停止其他的子執行緒，讓未開啟的執行緒不開啟執行，則傳遞 Token 到 Task.Run中
+
+            try
+            {
+                List<Task> taskList = new List<Task>();
+                for (int i = 0; i < 50; i++)
+                {
+                    string name = $"ThreadException_OnClick_{i}";
+                    int k = i;
+
+                    Thread.Sleep(new Random().Next(50, 100)); // 休息 50 ~ 100 ms
+
+                    taskList.Add(Task.Run(() =>
+                    {
+                        try
+                        {
+                            if (!cts.IsCancellationRequested)
+                            {
+                                Console.WriteLine($@"{name} [{Thread.CurrentThread.ManagedThreadId:00}] Start");
+                            }
+
+                            if (k == 5)
+                            {
+                                throw new Exception($"{name} [{Thread.CurrentThread.ManagedThreadId:00}] Exception!");
+                            }
+                            else if (k == 6)
+                            {
+                                throw new Exception($"{name} [{Thread.CurrentThread.ManagedThreadId:00}] Exception!");
+                            }
+
+                            if (!cts.IsCancellationRequested)
+                            {
+                                Console.WriteLine($@"{name} [{Thread.CurrentThread.ManagedThreadId:00}] Finished!");
+                            }
+                            else
+                            {
+                                Console.WriteLine($@"{name} [{Thread.CurrentThread.ManagedThreadId:00}] Cancel!");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            cts.Cancel(); // 可以根據自己的業務需求直接 Cancel
+                            Console.WriteLine(ex.Message);
+                        }
+
+                        // 若有異常出現，要讓未開啟的執行緒直接停止不開啟，要用到 Task.Run 的 第二個參數
+                        // Task.Run 的多載第二個參數 CancellationToken
+                        // cts.Token 會引發一個 ThrowIfCancellationRequested 異常，並取消未啟動的執行緒
+                        // 若不加第二個參數，每個執行緒都會開啟執行，在子執行緒中必須自行判斷 IsCancellationRequested 狀態
+                    }, cts.Token));
+                }
+
+                Task.WaitAll(taskList.ToArray());
+            }
+            catch (AggregateException aex)
+            {
+                foreach (var ex in aex.InnerExceptions)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
 
 
 
@@ -635,6 +787,6 @@ namespace AsyncDemo
         }
 
 
-        
+
     }
 }
