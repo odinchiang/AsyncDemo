@@ -745,6 +745,148 @@ namespace AsyncDemo
             }
         }
 
+        /// <summary>
+        /// 執行緒的臨時變數
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void TemporaryVariable_OnClick(object sender, RoutedEventArgs e)
+        {
+            Console.WriteLine(@"---------------------------------------------------------");
+            Console.WriteLine($@"TemporaryVariable_OnClick Start [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+
+            //Console.WriteLine($@"{DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+
+            //for (int i = 0; i < 20; i++) // for 循環速度很快
+            //{
+            //    // 開啟執行緒，不會阻塞，執行緒會延遲啟動，在第一個執行緒啟動前，
+            //    // for 迴圈可能已經循環完畢，所以印出的 i 值，有可能都是 20。
+            //    // 為了避免此種狀況，要用一個臨時的變數，每次循環都將 i 賦值給他。
+            //    Task.Run(() =>
+            //    {
+            //        Console.WriteLine($@"i = {i} [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+            //    });
+            //}
+
+            for (int i = 0; i < 20; i++)
+            {
+                // 作用域，k 只針對某一次 for 循環
+                // 循環 20 次，就會有 20 個 k 值。
+                int k = i;
+                Task.Run(() =>
+                {
+                    Console.WriteLine($@"k = {k} [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+                });
+            }
+
+            Console.WriteLine($@"TemporaryVariable_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+        }
+
+        /// <summary>
+        /// 執行緒安全
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ThreadSafe_OnClick(object sender, RoutedEventArgs e)
+        {
+            {
+                int numOne = 0;
+                int numTwo = 0;
+
+                List<Task> taskList = new List<Task>();
+
+                for (int i = 0; i < 10000; i++)
+                {
+                    numOne += 1;
+                }
+
+                for (int i = 0; i < 10000; i++)
+                {
+                    taskList.Add(Task.Run(() =>
+                    {
+                        numTwo += 1;
+                    }));
+                }
+
+                Task.WaitAll(taskList.ToArray());
+                Console.WriteLine($@"numOne: {numOne}");
+                Console.WriteLine($@"numTow: {numTwo}");
+            }
+            
+
+            // 執行緒安全：程式碼用多執行緒運行和單執行緒運行的結果相同
+            // 執行緒不安全一般出現在全域變數/共享變數/磁碟機文件/靜態變數/資料庫的值，
+            // 只要是多項去存取修改的時候，就可能會出現執行緒不安全問題。
+            // 磁碟機文件：若開啟多個執行緒去操作文件，A--操作，B--也操作
+
+            // 解決執行緒安全問題
+
+            // 1. 使用 lock 鎖。
+            // Lock 鎖：可以鎖住一個引用，避免多個執行緒同時併發。
+            // 使用鎖：private static readonly object _objLock = new object()
+            // Lock：建議使用 object 來鎖，不能鎖 null，也不建議鎖 string、this...
+            // 鎖的作用：排他。
+
+            {
+                // 鎖 this 範例
+                Test test = new Test();
+                test.DoTest();
+            }
+
+            {
+                // lock 較標準作法，用 object
+                List<Task> taskList = new List<Task>();
+                int numTwo = 0;
+
+                object objLock = new object();
+                for (int i = 0; i < 10000; i++)
+                {
+                    taskList.Add(Task.Run(() =>
+                    {
+                        // lock 可以避免多執行緒併發，但如果鎖住，這裡跟單執行緒基本上沒有區別
+                        lock (objLock)
+                        {
+                            numTwo += 1;
+                        }
+                    }));
+                }
+
+                Task.WaitAll(taskList.ToArray());
+                Console.WriteLine($@"numTow (lock): {numTwo}");
+            }
+
+            // 2. 使用執行緒安全集合
+            // System.Collections.Concurrent 命名空間下的類別
+            
+            // 3. 將要處理的資料拆分，避免多個執行緒操作同一堆資料
+            
+        }
+
+        public class Test
+        {
+            private int _testNum = 0;
+
+            public void DoTest()
+            {
+                // 會不會 deadlock？不會！因為是同一個執行緒，this 表示 Test 的實例
+                // lock 主要是排他
+                // 此處是單執行緒且是同一個實例
+                lock (this)
+                {
+                    Thread.Sleep(200);
+                    _testNum += 1;
+                    if (DateTime.Now.Day < 15 && _testNum < 5)
+                    {
+                        DoTest();
+                    }
+                    else
+                    {
+                        Console.WriteLine(@"結束了");
+                    }
+                }
+            }
+        }
+
 
 
 
@@ -787,6 +929,6 @@ namespace AsyncDemo
         }
 
 
-
+        
     }
 }

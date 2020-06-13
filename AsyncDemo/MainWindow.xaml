@@ -30,6 +30,8 @@
             <Button Name="ParallelMethod" Click="ParallelMethod_OnClick">Parallel</Button>
             <Button Name="ThreadException" Click="ThreadException_OnClick">多執行緒異常處理</Button>
             <Button Name="CancelThread" Click="CancelThread_OnClick">執行緒取消</Button>
+            <Button Name="TemporaryVariable" Click="TemporaryVariable_OnClick">執行緒臨時變數</Button>
+            <Button Name="ThreadSafe" Click="ThreadSafe_OnClick">執行緒安全</Button>
         </StackPanel>
     </ScrollViewer>
 </Window>
