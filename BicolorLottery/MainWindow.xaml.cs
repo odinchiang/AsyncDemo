@@ -100,14 +100,15 @@ namespace BicolorLottery
 
                                 Dispatcher.Invoke(() =>
                                 {
-                                    // 利用一個集合，紀錄出現的號碼，賦值的時候判斷是否重複
-                                    List<string> uiRedNumbers = GetUiRedNumbers();
-
                                     // 雖然有一個集合用以判斷是否重複，但若有一個以上的執行緒幾乎同時判斷沒重複，
                                     // 但他們取到的值又相同時，就有可能重複(機率非常低，但還是有可能)，所以這裡
-                                    // 要 lock 住，讓每一執行緒排隊進入判斷重複並賦值，這樣就能排除重複的可能。
+                                    // 要 lock 住，讓每一執行緒排隊進入取得隨機數、判斷重複並賦值，這樣就能排
+                                    // 除重複的可能。
                                     lock (_lockObj)
                                     {
+                                        // 利用一個集合，紀錄出現的號碼，賦值的時候判斷是否重複
+                                        List<string> uiRedNumbers = GetUiRedNumbers();
+
                                         if (!uiRedNumbers.Contains(redNumber))
                                         {
                                             tbk.Text = redNumber;
