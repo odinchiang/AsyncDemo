@@ -49,7 +49,11 @@ namespace AsyncDemo
 
             for (int i = 0; i < 5; i++)
             {
-                action.BeginInvoke("非同步呼叫", null, null);
+                // 在 .NET Core 中不支援 BeginInvoke，可改為用 Task.Run
+                //action.BeginInvoke("非同步呼叫", null, null);
+
+                // .Net Core 使用
+                Task.Run (() => DoSomethingLong("非同步呼叫"));
             }
 
             Console.WriteLine($@"AsyncMethod_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
