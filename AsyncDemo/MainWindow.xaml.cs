@@ -181,7 +181,7 @@ namespace AsyncDemo
                 //thread.Suspend(); // 暫停執行緒，已被棄用
                 //thread.Resume(); // 恢復繼續執行緒，已被棄用，無法實時的暫停或恢復執行緒
 
-                //thread.Abort(); // 終結執行緒
+                //thread.Abort(); // 終結執行緒，利用拋出 ThreadAbortException 異常停止執行緒
                 //Thread.ResetAbort(); // 取消 Abort
 
                 // 等待執行緒 方法 1 (會鎖 UI)
@@ -270,7 +270,7 @@ namespace AsyncDemo
             };
 
             // 返回一個委派，在需要執行結果的時候，在執行這個委派
-            Func<int> funcResult = ThreadWithReturn(func);
+            Func<int> funcResult = ThreadWithReturn(func); // 不會鎖住 UI
 
             Console.WriteLine(@"中間過程");
             Console.WriteLine(@"中間過程");
