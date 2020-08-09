@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -503,13 +504,106 @@ namespace AsyncDemo
                 Console.WriteLine($@"ContinueWhenAll 所有人任務開發完畢，慶祝一下！ [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
             }));
 
-            Task.WaitAny(tasks.ToArray()); // 有任一個執行緒完成即繼續往下執行
+            Task.WaitAny(tasks.ToArray()); // 有任一個執行緒完成即繼續往下執行，會 block 主執行緒
             Console.WriteLine($@"老師開始準備部署環境！ [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
 
             Task.WaitAll(tasks.ToArray()); // 需等待所有執行緒完成才會往下執行，會 block 主執行緒
             Console.WriteLine($@"模組均已完成，老師評論！ [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
 
             Console.WriteLine($@"TaskWait_OnClick End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff}");
+        }
+
+        private void TaskWait2_OnClick(object sender, RoutedEventArgs e)
+        {
+            // 多執行緒在甚麼情況下使用？有甚麼意義？
+                // 需要在任務併發的時候可用多執行緒
+                // 提高性能，改善用戶體驗
+
+                Console.WriteLine(@"第 14 期高級班開課了");
+                Console.WriteLine(@"Richard 老師開始講課");
+
+                // 一節課一節課的往後講解內容
+                // 不能併發，因為有嚴格順序
+                Teach("Lesson 1");
+                Teach("Lesson 2");
+                Teach("Lesson 3");
+
+                Console.WriteLine(@"開始直播平台的專案實戰...");
+                // 小夥伴們合作完成，可以使用多執行緒，可以每個小夥伴對應一個執行緒
+                // 開發可以多人合作---多執行緒---提升性能
+
+                TaskFactory taskFactory = new TaskFactory();
+                List<Task> taskList = new List<Task>();
+                taskList.Add(taskFactory.StartNew(o => Code("學員 A", "WebApi"), "學員 A"));
+                taskList.Add(taskFactory.StartNew(o => Code("學員 B", "視頻流處理"), "學員 B"));
+                taskList.Add(taskFactory.StartNew(o => Code("學員 C", "搭建集群"), "學員 C"));
+                taskList.Add(taskFactory.StartNew(o => Code("學員 D", "搭建 RabbitMQ 非同步隊列"), "學員 D"));
+
+                // 3. 如果某一同學第一個完成功能，獲取一個紅包獎勵，要求不能卡頓介面
+                //taskFactory.ContinueWhenAny(taskList.ToArray(), t => // 回調
+                //{
+                //    // 開啟一個新的執行緒執行任務，這個執行緒可能是新的執行緒，也可能是上面執行任務的執行緒(熱執行緒)
+                //    Console.WriteLine($@"XXX 開發完成，獲取紅包獎勵 {Thread.CurrentThread.ManagedThreadId:00}");
+                //});
+
+                // 5. 如何讓獎勵一定要在準備環境之前？
+                // 用 Task.WhenAny，並將 taskFactory 包在 taskList 中 (但此方法仍舊無法百分之百成功)
+                taskList.Add(taskFactory.ContinueWhenAny(taskList.ToArray(), t => // 回調
+                {
+                    // 開啟一個新的執行緒執行任務，這個執行緒可能是新的執行緒，也可能是上面執行任務的執行緒(熱執行緒)
+                    Console.WriteLine($@"{t.AsyncState} 開發完成，獲取紅包獎勵 {Thread.CurrentThread.ManagedThreadId:00}");
+                }));
+
+                // 4. 整個專案完成以後，Richard 老師給大家做點評，並讓此訊息在慶功宴之前，要求不能卡頓介面
+                taskList.Add(taskFactory.ContinueWhenAll(taskList.ToArray(), t =>
+                {
+                    Console.WriteLine($@"4 個模組全部完成後，Richard 集中點評 {Thread.CurrentThread.ManagedThreadId:00}");
+                }));
+                
+                //taskList.Add(taskFactory.ContinueWhenAll(taskList.ToArray(), rArray => Console.WriteLine($@"开发都完成，一起庆祝一下{Thread.CurrentThread.ManagedThreadId:00}")));
+
+                // ContinueWhenAny  ContinueWhenAll 非阻塞式的回调；
+                // 而且使用的线程可能是新线程，也可能是刚完成任务的线程，唯一不可能是主线程
+
+                // 2. 誰先完成任務，Richard 老師就要開始準備環境
+                // 阻塞當前執行緒，等著任意一個任務完成，卡頓介面
+                Task.WhenAny(taskList.ToArray()).ContinueWith(t => Console.WriteLine(@"XXX 完成任務，Richard老師開始準備環境"));//也可以限时等待
+                //Console.WriteLine(@"XXX 完成任務，Richard老師開始準備環境");
+
+                // 1. 專案大功告成，擺個慶功宴，大家 Happy 一下
+                // 主執行緒等待全部子執行緒完成任务再繼續，阻塞當前執行緒，等著全部任務完成，卡頓介面
+                Task.WhenAll(taskList.ToArray()).ContinueWith(t => Console.WriteLine(@"專案大功告成，擺個慶功宴，大家 Happy 一下"));
+                //Console.WriteLine(@"4 個模組全部完成後，Richard 集中點評");
+                
+                // Task.WaitAny、Task.WaitAll 都是阻塞當前執行緒，等任務完成後執行操作
+                // 阻塞卡介面，是為了併發及順序控制
+                // Task.WaitAll
+                // 網站首頁：A 資料庫、B 介面、C 分布式服務、D 搜索引擎，適合多執行緒併發，都完成後才能返回給用戶，需要等待 WaitAll
+                // Task.WaitAny
+                // 列表頁：核心資料可能來自資料庫/介面服務/分布式搜索引擎/快取，多執行緒併發請求，哪個先完成就用哪個結果，其他的就不管了
+        }
+
+        private void TaskLimitCount_OnClick(object sender, RoutedEventArgs e)
+        {
+            // 開啟執行緒時，如何控制執行緒數量？
+
+            // 限制執行緒在 20
+            List<Task> taskList = new List<Task>();
+            for (int i = 0; i < 1000; i++)
+            {
+                int k = i;
+                if (taskList.Count(t => t.Status != TaskStatus.RanToCompletion) >= 20)
+                {
+                    Task.WaitAny(taskList.ToArray());
+                    taskList = taskList.Where(t => t.Status != TaskStatus.RanToCompletion).ToList();
+                }
+
+                taskList.Add(Task.Run(() =>
+                {
+                    Console.WriteLine($@"This is {k} running ThreadId={Thread.CurrentThread.ManagedThreadId:00}");
+                    Thread.Sleep(2000);
+                }));
+            }
         }
 
         /// <summary>
@@ -931,8 +1025,5 @@ namespace AsyncDemo
 
             Console.WriteLine($@"==== [{name}] Coding [{projectName}] End [{Thread.CurrentThread.ManagedThreadId:00}] {DateTime.Now:yyyy/MM/dd HH:mm:ss:fff} ====");
         }
-
-
-        
     }
 }

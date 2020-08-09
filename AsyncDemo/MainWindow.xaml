@@ -26,6 +26,8 @@
             <Button Name="ThreadPoolSetWrong" Click="ThreadPoolSetWrong_OnClick">Thread Pool 設置問題</Button>
             <Button Name="TaskMethod" Click="TaskMethod_OnClick">Task</Button>
             <Button Name="TaskWait" Click="TaskWait_OnClick">Task 等待</Button>
+            <Button Name="TaskWait2" Click="TaskWait2_OnClick">Task 等待 2</Button>
+            <Button Name="TaskLimitCount" Click="TaskLimitCount_OnClick">Task 控制執行緒數量</Button>
             <Button Name="TaskReturnValue" Click="TaskReturnValue_OnClick">Task 返回值</Button>
             <Button Name="ParallelMethod" Click="ParallelMethod_OnClick">Parallel</Button>
             <Button Name="ThreadException" Click="ThreadException_OnClick">多執行緒異常處理</Button>
