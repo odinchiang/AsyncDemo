@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -583,6 +584,11 @@ namespace AsyncDemo
                 // 列表頁：核心資料可能來自資料庫/介面服務/分布式搜索引擎/快取，多執行緒併發請求，哪個先完成就用哪個結果，其他的就不管了
         }
 
+        /// <summary>
+        /// 控制執行緒數量
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void TaskLimitCount_OnClick(object sender, RoutedEventArgs e)
         {
             // 開啟執行緒時，如何控制執行緒數量？
@@ -639,7 +645,10 @@ namespace AsyncDemo
         }
 
         /// <summary>
-        /// Parallel 對 Task 進行進一步的封裝
+        /// Parallel 對 Task 進行進一步的封裝 (.NET Framework 4.5)
+        /// 1. Parallel 併發執行多個 Action，多執行緒的，執行緒 ID 不同
+        /// 2. 主執行緒參與計算-會鎖 UI
+        /// 3. Task.WaitAll + 主執行緒參與計算
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -660,7 +669,7 @@ namespace AsyncDemo
             {
                 // 按順序執行，鎖 UI
                 // 會同時開啟 10 個執行緒
-                Parallel.For(0, 10, t => DoSomethingLong($"Parallel.For ({t})"));
+                //Parallel.For(0, 10, t => DoSomethingLong($"Parallel.For ({t})"));
 
                 //設定 ParallelOptions 的 MaxDegreeOfParallelism，會限制執行緒的數量
                 //ParallelOptions parallelOptions = new ParallelOptions()
@@ -672,7 +681,7 @@ namespace AsyncDemo
 
             {
                 // 按順序執行，鎖 UI
-                //Parallel.ForEach(new int[] {12, 13, 14, 15},
+                //Parallel.ForEach(new int[] { 12, 13, 14, 15 },
                 //    t => DoSomethingLong($"Parallel.ForEach ({t})"));
             }
 
@@ -688,10 +697,10 @@ namespace AsyncDemo
 
             {
                 // 若不希望主執行緒也參與計算，則另外開一個執行緒將目前的任務包進去
-                //Task.Run(() =>
-                //{
-                //    Parallel.For(0, 10, t => DoSomethingLong($"Parallel.For ({t})"));
-                //});
+                Task.Run(() =>
+                {
+                    Parallel.For(0, 10, t => DoSomethingLong($"Parallel.For ({t})"));
+                });
             }
 
 
@@ -712,6 +721,11 @@ namespace AsyncDemo
             }
 
             {
+                // 在子執行緒內部，發生異常之後，異常找不到，異常被吞掉
+                // 1. 用 List<Task> 存入所有 Task
+                // 2. Task.WaitAll 可以捕捉到 AggregateException 類型異常
+                // 3. 用 Try Catch 捕捉異常
+                // 4. 若有一個執行緒異常，對整個業務鍊來說是不完美的，可能需要讓其他執行緒停止。
                 try
                 {
                     List<Task> taskList = new List<Task>();
@@ -742,7 +756,7 @@ namespace AsyncDemo
                     // 實際開發中是不允許在子執行緒中出現異常的
                     Task.WaitAll(taskList.ToArray());
                 }
-                catch (AggregateException aex)
+                catch (AggregateException aex) // 專門用於捕捉多執行緒的異常
                 {
                     foreach (var ex in aex.InnerExceptions)
                     {
@@ -796,6 +810,10 @@ namespace AsyncDemo
                             {
                                 Console.WriteLine($@"{name} [{Thread.CurrentThread.ManagedThreadId:00}] Start");
                             }
+                            else
+                            {
+                                throw new AggregateException();
+                            }
 
                             if (k == 5)
                             {
@@ -815,6 +833,13 @@ namespace AsyncDemo
                                 Console.WriteLine($@"{name} [{Thread.CurrentThread.ManagedThreadId:00}] Cancel!");
                             }
                         }
+                        catch (AggregateException aex) // 專門用於捕捉多執行緒的異常
+                        {
+                            foreach (var ex in aex.InnerExceptions)
+                            {
+                                Console.WriteLine(ex.Message);
+                            }
+                        }
                         catch (Exception ex)
                         {
                             cts.Cancel(); // 可以根據自己的業務需求直接 Cancel
@@ -828,6 +853,7 @@ namespace AsyncDemo
                     }, cts.Token));
                 }
 
+                // 必須要 WaitAll 才能捕捉到異常
                 Task.WaitAll(taskList.ToArray());
             }
             catch (AggregateException aex)
@@ -922,8 +948,9 @@ namespace AsyncDemo
             // 1. 使用 lock 鎖。
             // Lock 鎖：可以鎖住一個引用，避免多個執行緒同時併發。
             // 使用鎖：private static readonly object _objLock = new object()
-            // Lock：建議使用 object 來鎖，不能鎖 null，也不建議鎖 string、this...
+            // Lock：建議使用 object 來鎖，不能鎖 null，也不要鎖 string、this...，可能會衝突
             // 鎖的作用：排他。
+            // 不推薦 Lock，Lock 為反多執行緒的
 
             {
                 // 鎖 this 範例
@@ -955,8 +982,49 @@ namespace AsyncDemo
 
             // 2. 使用執行緒安全集合
             // System.Collections.Concurrent 命名空間下的類別
+            // BlockingCollection<T>：為實現 IProducerConsumerCollection<T> 的執行緒安全集合提供阻塞和限制功能。
+            // ConcurrentBag<T>：表示物件的執行緒安全的無序集合。
+            // ConcurrentDictionary<TKey, TValue>：表示可由多個執行緒同時訪問的鍵值對的執行緒安全集合。
+            // ConcurrentQueue<T>：表示執行緒安全的先進先出 (FIFO) 集合。
+            // ConcurrentStack<T>：表示執行緒安全的後進先出 (LIFO) 集合。
+            // OrderablePartitioner<TSource>：表示將一個可排序資料源拆分成多個分區的特定方式。
+            // Partitioner：提供針對陣列、列表和可枚舉項的常見分區策略。
+            // Partitioner<TSource>：表示將一個資料源拆分成多個分區的特定方式。
+
+            {
+                List<int> tasklist = new List<int>();
+                BlockingCollection<int> blockinglist = new BlockingCollection<int>();
+                ConcurrentBag<int> concurrentBag = new ConcurrentBag<int>();
+                ConcurrentDictionary<string, int> concurrentDictionary = new ConcurrentDictionary<string, int>();
+                ConcurrentQueue<int> concurrentQueue = new ConcurrentQueue<int>();
+                ConcurrentStack<int> concurrentStack = new ConcurrentStack<int>();
+
+                for (int i = 0; i < 10000; i++)
+                {
+                    int k = i;
+                    Task.Run(() =>
+                    {
+                        tasklist.Add(k);
+                        blockinglist.Add(k);
+                        concurrentBag.Add(k);
+                        concurrentDictionary.TryAdd($"concurrentDictionary_{k}", k);
+                        concurrentQueue.Enqueue(k);
+                        concurrentStack.Push(k);
+                    });
+                }
+
+                Console.WriteLine($@"tasklist: {tasklist.Count()}");
+                Console.WriteLine($@"blockinglist: {blockinglist.Count()}");
+                Console.WriteLine($@"concurrentBag: {concurrentBag.Count()}");
+                Console.WriteLine($@"concurrentDictionary: {concurrentDictionary.Count()}");
+                Console.WriteLine($@"concurrentQueue: {concurrentQueue.Count()}");
+                Console.WriteLine($@"concurrentStack: {concurrentStack.Count()}");
+            }
             
             // 3. 將要處理的資料拆分，避免多個執行緒操作同一堆資料
+            // 執行緒安全一般發生在全域變數、共享變數、硬碟文件，只要是多執行緒都能存取和修改的公共資料。
+            // 既然多執行緒去操作會有執行緒安全問題，那就拆分資料源，然後每一個執行緒對應於單獨的某一個資料塊。
+            // 多執行緒操作完畢後，再合併資料，後續爬蟲實戰會有應用。
             
         }
 
