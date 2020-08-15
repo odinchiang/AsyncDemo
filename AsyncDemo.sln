@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsyncDemo", "AsyncDemo\Asyn
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BicolorLottery", "BicolorLottery\BicolorLottery.csproj", "{2CD26710-3F78-4DE8-A426-FEC9C7656A26}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LotteryTicket", "LotteryTicket\LotteryTicket.csproj", "{8B38A7DA-1BA7-4D90-BD21-B4681F6623AB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{2CD26710-3F78-4DE8-A426-FEC9C7656A26}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2CD26710-3F78-4DE8-A426-FEC9C7656A26}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2CD26710-3F78-4DE8-A426-FEC9C7656A26}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B38A7DA-1BA7-4D90-BD21-B4681F6623AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B38A7DA-1BA7-4D90-BD21-B4681F6623AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B38A7DA-1BA7-4D90-BD21-B4681F6623AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B38A7DA-1BA7-4D90-BD21-B4681F6623AB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

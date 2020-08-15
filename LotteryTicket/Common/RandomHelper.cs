@@ -21,7 +21,7 @@ namespace BicolorLottery.Common
         /// <returns></returns>
         public int GetRandomNumberDelay(int min, int max)
         {
-            Thread.Sleep(GetRandomNumber(500, 1000)); // 休息時間隨機
+            Thread.Sleep(GetRandomNumber(300, 700)); // 休息時間隨機
             return GetRandomNumber(min, max);
         }
 
